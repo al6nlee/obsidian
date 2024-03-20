@@ -1,6 +1,7 @@
 package filemanager
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,8 +25,12 @@ type FileAttribute struct {
 func fmtStr(file FileAttribute) string {
 	// 创建一个字符串切片来存储非空的tag
 	var filteredTags []string
+	existingTags := make(map[string]bool) // 用于存储已存在的标签
 	for _, tag := range file.Tag {
-		if tag != "" {
+		// 将标签转换为小写
+		lowercaseTag := strings.ToLower(tag)
+		if tag != "" && !existingTags[lowercaseTag] {
+			existingTags[lowercaseTag] = true
 			filteredTags = append(filteredTags, fmt.Sprintf("  - %s", tag))
 		}
 	}
@@ -44,7 +49,30 @@ func fmtStr(file FileAttribute) string {
 	return fmt.Sprintf(formatStr, file.FileName, tagStr, file.CreateTime, file.ModTime, file.Author)
 }
 
-func AddAttribute(path string, file FileAttribute) error {
+func compareModTimeInFile(content string, file FileAttribute) bool {
+
+	re := regexp.MustCompile(`ModDate: (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+.*?)\n`)
+	match := re.FindStringSubmatch(content)
+	if len(match) < 2 {
+		// 如果没有匹配到时间数据，说明文件是首次添加属性，也返回true
+		return true
+	}
+	// 解析时间数据为time.Time类型
+	modDateStr := match[1]
+	modDateTime, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", modDateStr)
+	if err != nil {
+		// 如果时间数据解析失败，返回false
+		return false
+	}
+	// 将file.ModTime转换为UTC时间
+	fileModTimeUTC := file.ModTime
+	// 比较时间差
+	timeDiff := fileModTimeUTC.Sub(modDateTime)
+	// 如果时间差小于等于3秒，返回true，否则返回false
+	return timeDiff >= 10*time.Second
+}
+
+func AddAttribute(path string, file FileAttribute) (err error) {
 	// 读取原文件内容
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -53,6 +81,10 @@ func AddAttribute(path string, file FileAttribute) error {
 
 	// 将文件内容转换为字符串
 	contentStr := string(content)
+
+	if !compareModTimeInFile(contentStr, file) {
+		return errors.New("compareModTimeInFile fail")
+	}
 
 	// 查找第一个 "---\n"
 	startIndex := strings.Index(contentStr, "---\n")
