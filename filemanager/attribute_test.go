@@ -8,18 +8,19 @@ import (
 )
 
 func TestProcessFiles(t *testing.T) {
-	dir := "/Users/alan/Github/obsidian/note"
-	err := filemanager.ProcessFiles(dir)
+	path := "/Users/alan/Github/obsidian/note"
+	var tag []string
+	tag = append(tag, "示例标签")
+	fileAtt := filemanager.FileAttribute{Author: "alan", Tag: tag}
+	err := filemanager.ProcessFiles(path, &fileAtt)
 	if err != nil {
 		t.Errorf("ProcessFiles() error = %v", err)
 	}
-
-	// You can add more assertions here if needed
 }
 
 func TestAddAttribute(t *testing.T) {
 	file := filemanager.FileAttribute{
-		Tag:        [2]string{"tag1", "tag2"},
+		Tag:        []string{"tag1", "tag2"},
 		FileName:   "test.md",
 		CreateTime: time.Now(),
 		ModTime:    time.Now(),
@@ -42,6 +43,4 @@ func TestAddAttribute(t *testing.T) {
 	if err != nil {
 		t.Errorf("AddAttribute() error = %v", err)
 	}
-
-	// You can add more assertions here if needed
 }
