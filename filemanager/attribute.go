@@ -11,7 +11,7 @@ import (
 )
 
 type FileAttribute struct {
-	Tag        [2]string
+	Tag        []string
 	Dir        string // 这个用不到
 	FileName   string
 	CreateTime time.Time
@@ -38,7 +38,7 @@ func fmtStr(file FileAttribute) string {
 		"CreateDate: %s\n" +
 		"ModDate: %s\n" +
 		"Draft: false\n" +
-		"Author: %s\n---\n\n"
+		"Author: %s\n---\n"
 
 	// 使用格式化字符串和参数生成最终结果
 	return fmt.Sprintf(formatStr, file.FileName, tagStr, file.CreateTime, file.ModTime, file.Author)
@@ -78,10 +78,12 @@ func AddAttribute(path string, file FileAttribute) error {
 	return nil
 }
 
-func ProcessFiles(dir string) error {
+func ProcessFiles(path string, fileAtt *FileAttribute) error {
 	re := regexp.MustCompile(`【(.*?)】`)
 	// 遍历目录
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		// 每一个文件都实例化出一个具体的fileAtt
+		_fileAtt := *fileAtt
 		if err != nil {
 			return err
 		}
@@ -91,17 +93,19 @@ func ProcessFiles(dir string) error {
 			return nil
 		}
 
-		var tagArr [2]string
-		tagArr[0] = filepath.Base(filepath.Dir(path))
 		matches := re.FindStringSubmatch(info.Name())
 		if len(matches) > 1 {
-			tagArr[1] = matches[1]
+			_fileAtt.Tag = append(_fileAtt.Tag, matches[1])
 		}
-		file := FileAttribute{Tag: tagArr, Dir: filepath.Dir(path), FileName: info.Name(),
-			CreateTime: time.Unix(int64(info.Sys().(*syscall.Stat_t).Birthtimespec.Sec),
-				int64(info.Sys().(*syscall.Stat_t).Birthtimespec.Nsec)),
-			ModTime: info.ModTime(), Size: info.Size(), Mode: info.Mode().String(), Author: "alan"}
-		err = AddAttribute(path, file)
+		_fileAtt.Tag = append(_fileAtt.Tag, filepath.Base(filepath.Dir(path)))
+		_fileAtt.Dir = filepath.Dir(path)
+		_fileAtt.FileName = info.Name()
+		_fileAtt.CreateTime = time.Unix(int64(info.Sys().(*syscall.Stat_t).Birthtimespec.Sec),
+			int64(info.Sys().(*syscall.Stat_t).Birthtimespec.Nsec))
+		_fileAtt.ModTime = info.ModTime()
+		_fileAtt.Size = info.Size()
+		_fileAtt.Mode = info.Mode().String()
+		err = AddAttribute(path, _fileAtt)
 		if err != nil {
 			return err
 		}
