@@ -24,8 +24,12 @@ type FileAttribute struct {
 func fmtStr(file FileAttribute) string {
 	// 创建一个字符串切片来存储非空的tag
 	var filteredTags []string
+	existingTags := make(map[string]bool) // 用于存储已存在的标签
 	for _, tag := range file.Tag {
-		if tag != "" {
+		// 将标签转换为小写
+		lowercaseTag := strings.ToLower(tag)
+		if tag != "" && !existingTags[lowercaseTag] {
+			existingTags[lowercaseTag] = true
 			filteredTags = append(filteredTags, fmt.Sprintf("  - %s", tag))
 		}
 	}
