@@ -100,7 +100,7 @@ func ProcessFiles(dir string) error {
 		file := FileAttribute{Tag: tagArr, Dir: filepath.Dir(path), FileName: info.Name(),
 			CreateTime: time.Unix(int64(info.Sys().(*syscall.Stat_t).Birthtimespec.Sec),
 				int64(info.Sys().(*syscall.Stat_t).Birthtimespec.Nsec)),
-			ModTime: info.ModTime(), Size: info.Size(), Mode: info.Mode().String()}
+			ModTime: info.ModTime(), Size: info.Size(), Mode: info.Mode().String(), Author: "alan"}
 		err = AddAttribute(path, file)
 		if err != nil {
 			return err
