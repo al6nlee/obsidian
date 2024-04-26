@@ -1,7 +1,6 @@
 package filemanager
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,6 +19,7 @@ type FileAttribute struct {
 	Size       int64
 	Mode       string
 	Author     string
+	ISDraft    bool
 }
 
 func fmtStr(file FileAttribute) string {
@@ -42,11 +42,11 @@ func fmtStr(file FileAttribute) string {
 		"tags: \n%s\n" +
 		"CreateDate: %s\n" +
 		"ModDate: %s\n" +
-		"Draft: false\n" +
+		"Draft: %v\n" +
 		"Author: %s\n---\n"
 
 	// 使用格式化字符串和参数生成最终结果
-	return fmt.Sprintf(formatStr, file.FileName, tagStr, file.CreateTime, file.ModTime, file.Author)
+	return fmt.Sprintf(formatStr, file.FileName, tagStr, file.CreateTime, file.ModTime, file.ISDraft, file.Author)
 }
 
 func compareModTimeInFile(content string, file FileAttribute) bool {
@@ -82,9 +82,9 @@ func AddAttribute(path string, file FileAttribute) (err error) {
 	// 将文件内容转换为字符串
 	contentStr := string(content)
 
-	if !compareModTimeInFile(contentStr, file) {
-		return errors.New("compareModTimeInFile fail")
-	}
+	// if !compareModTimeInFile(contentStr, file) {
+	// 	return errors.New("compareModTimeInFile fail")
+	// }
 
 	// 查找第一个 "---\n"
 	startIndex := strings.Index(contentStr, "---\n")
@@ -127,9 +127,11 @@ func ProcessFiles(path string, fileAtt *FileAttribute) error {
 
 		matches := re.FindStringSubmatch(info.Name())
 		if len(matches) > 1 {
-			_fileAtt.Tag = append(_fileAtt.Tag, matches[1])
+			_fileAtt.Tag[0] = matches[1]
+			// _fileAtt.Tag = append(_fileAtt.Tag, matches[1])
+		} else {
+			_fileAtt.Tag = append(_fileAtt.Tag, filepath.Base(filepath.Dir(path)))
 		}
-		_fileAtt.Tag = append(_fileAtt.Tag, filepath.Base(filepath.Dir(path)))
 		_fileAtt.Dir = filepath.Dir(path)
 		_fileAtt.FileName = info.Name()
 		_fileAtt.CreateTime = time.Unix(int64(info.Sys().(*syscall.Stat_t).Birthtimespec.Sec),
